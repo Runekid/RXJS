@@ -1,5 +1,5 @@
 import { Observable, range, zip, from, repeat, of, combineLatest } from 'rxjs';
-import { map, switchMap } from "rxjs/operators";
+import { catchError, filter, map, switchMap, tap } from "rxjs/operators";
 import { ajax } from 'rxjs/ajax';
 import { AjaxProductsResponse, Product } from './models/product-models';
 
@@ -15,9 +15,25 @@ import { AjaxProductsResponse, Product } from './models/product-models';
 // - Bonus: Download the Product thumbnails to a byte[] / base64 string
 
 
-export const ajax$ = ajax.getJSON<AjaxProductsResponse>('https://dummyjson.com/products?limit=3').pipe(
-    map(response => response.products)
+export const ajax$ = ajax.getJSON<AjaxProductsResponse>('https://dummyjson.com/products').pipe(
+    map(response => response.products),
+    map(products => products.filter(product => product.stock > 0)),
+    map(products => products.map(product => ({
+        id: product.id,
+        title: product.title,
+        category: product.category,
+        calculatedPrice: product.price - (product.price * product.discountPercentage),
+        thumbnail: product.thumbnail,
+    }))),
+    tap(gridProducts => {
+        console.log('GridProducts:', gridProducts);
+    }),
+    catchError(error => {
+        console.error('An error occurred:', error);
+        return of([]);
+    })
 );
+
 
 
 
